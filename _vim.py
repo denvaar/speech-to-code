@@ -3,9 +3,11 @@ from dragonfly import (Grammar, AppContext, MappingRule, Dictation, Integer,
 
 from utils.format import (snake_case, pascal_case, kebab_case, camel_case)
 
+
 class VimContext(AppContext):
     def matches(self, executable, title, handle):
         return title == "Default (nvim)"
+
 
 class Movement(MappingRule):
     mapping = {
@@ -21,6 +23,18 @@ class Movement(MappingRule):
         "[<n>] big (bee | B | be)": Text("%(n)dB"),
 
         "dollar": Key("$"),
+        "carrot": Key("^"),
+
+        "page down": Key('c-d'),
+        "page up": Key('c-u'),
+
+        "go left window": Key('c-w, h'),
+        "go right window": Key('c-w, l'),
+        "go next window": Key('c-w, w'),
+        "go previous window": Key('c-w, p'),
+
+        "go next tab": Key('c-w, t'),
+        "go previous tab": Key('c-w, T'),
     }
 
     extras = [
@@ -31,21 +45,20 @@ class Movement(MappingRule):
         "n": 1,
     }
 
+
 class Editing(MappingRule):
     mapping = {
         "undo": Key("u"),
         "redo": Key("c-r"),
-
         "(yank | copy | why | Y)": Key("y"),
         "(paste | pea | pee | P)": Key("p"),
-
+        "(ex | x)": Key("x"),
         "(delete | D | dee)": Key("d"),
-
         "repeat [<n> times]": Text("%(n)d."),
-
         "[<n>] tilda": Text("%(n)d~"),
-
-        "replace <replace_text>": Key("colon, percent, s, slash") + Text("%(replace_text)s/"),
+        "replace [with] <letter>": Text("r(letter)%s"),
+        "find and replace <replace_text>": Key("colon, percent, s, slash") +
+        Text("%(replace_text)s/"),
         "with <replace_text>": Text("%(replace_text)s/gc"),
         "yes": Key("y"),
         "no": Key("n"),
@@ -55,6 +68,7 @@ class Editing(MappingRule):
 
     extras = [
         Dictation("replace_text"),
+        Dictation("letter"),
         IntegerRef("n", 1, 900),
     ]
 
@@ -62,10 +76,26 @@ class Editing(MappingRule):
         "n": 1,
     }
 
+
 class Misc(MappingRule):
     mapping = {
-        "insert mode": Key("i"),
+        "(I | eye | insert mode)": Key("i"),
+        "big (I | eye)": Key("I"),
+        "A": Key("a"),
+        "big A": Key("A"),
+        "(O | oh)": Key("o"),
+        "big (O | oh)": Key("O"),
+
         "normal mode": Key("escape"),
+
+        "F Z F": Key("control:down, p, control:up"),
+
+        "visual line": Key("shift:down, v, shift:up"),
+        "visual block": Key("control:down, v, control:up"),
+
+        "split (vert | vertical)": Text(":vsp"),
+        "split (hoar | horiz | horizontal)": Text(":sp"),
+
         "escape": Key("escape"),
         "save": Text(":w\n"),
         "save quit": Text(":wq\n"),
@@ -75,6 +105,7 @@ class Misc(MappingRule):
 
     defaults = {}
 
+
 def search(text_transform, search_term):
     transformation_functions = {
         'snake': snake_case,
@@ -83,17 +114,19 @@ def search(text_transform, search_term):
         'camel': camel_case,
     }
 
-    transformation = transformation_functions.get(text_transform,
-            lambda default: default)(search_term)
+    transformation = transformation_functions.get(
+        text_transform, lambda default: default)(search_term)
 
     return Text(f'{transformation}').execute()
 
+
 class Searching(MappingRule):
     mapping = {
-        "search [<text_transform> case] <search_term>": Text("/") + Function(search) + Key("enter"),
+        "search [<text_transform> [case]] <search_term>": Text("/") +
+        Function(search) +
+        Key("enter"),
         "search this word": Text("#"),
         "no (highlight | H L)": Text(":nohl\n"),
-
         "next": Key("n"),
         "previous": Key("N"),
     }
@@ -101,12 +134,13 @@ class Searching(MappingRule):
     extras = [
         Dictation("search_term"),
         Choice("text_transform", {
-                "snake": "snake",
-                "pascal": "pascal",
-                "kebab": "kebab",
-                "camel": "camel",
-            }, default="")
+            "snake": "snake",
+            "pascal": "pascal",
+            "kebab": "kebab",
+            "camel": "camel",
+        }, default="")
     ]
+
 
 vim_context = VimContext(executable="vim")
 grammar = Grammar("vim", context=vim_context)
@@ -118,8 +152,9 @@ grammar.add_rule(Searching())
 
 grammar.load()
 
+
 def unload():
     global grammar
-    if grammar: grammar.unload()
+    if grammar:
+        grammar.unload()
     grammar = None
-
